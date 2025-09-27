@@ -1,11 +1,15 @@
-import uvicorn
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from a2wsgi import ASGIMiddleware
-import main
-import logging
 import json
+import logging
+
+import uvicorn
+from a2wsgi import ASGIMiddleware
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+
+import main
+
+logger = logging.getLogger(__name__)
 
 
 class TrainModelRequest(BaseModel):
@@ -51,7 +55,7 @@ async def train_model(request: TrainModelRequest):
             data_input_dict = json.loads(data_input)
             print(data_input)
             df = data_loader.load_data(data_input_dict)
-        except:
+        except json.JSONDecodeError:
             df = data_loader.load_data(data_input)
         data_processor = main.DataProcessor()
         df = data_processor.dynamic_preprocess_and_clean(df)
@@ -60,27 +64,26 @@ async def train_model(request: TrainModelRequest):
         auto_ts_model = main.AutoTSModel()
 
         auto_ts_model.train_model(df, date_column, value_column, forecast_length)
-        logging.info("Model trained successfully")
-    except Exception as e:
-        logging.error(f"Model training error: {e}")
-        return {"message": "failed", "result": e}
+        logger.info("Model trained successfully")
+    except Exception:
+        logger.exception("Model training error")
+        return {"message": "failed"}
 
-    try:
+    else:
         # Generate and visualize predictions
         prediction_visualizer = main.PredictionVisualizer()
         forecast_result = prediction_visualizer.visualize_and_export_predictions(
-            df, auto_ts_model, forecast_length, export_csv_path="predictions.csv"
+            auto_ts_model,
+            forecast_length,
+            export_csv_path="predictions.csv",
         )
 
         return {"message": "success", "result": forecast_result}
-    except Exception as e:
-        logging.error(f"Visualization error: {e}")
-        return {"message": "failed", "result": e}
 
 
 # Wrap the FastAPI app in ASGIMiddleware
 wsgi_app = ASGIMiddleware(app)
-logging.info("App created successfully")
+logger.info("App created successfully")
 
 
 # Define the Root path
@@ -90,4 +93,4 @@ async def read_root():
 
 
 if __name__ == "__main__":
-    uvicorn.run("app:app", host="0.0.0.0", port=8000)
+    uvicorn.run("app:app", host="127.0.0.1", port=8000)

@@ -1,34 +1,29 @@
-import pandas as pd
 import json
-from autots import AutoTS
-import joblib
-import os
 import logging
-import matplotlib.pyplot as plt
-import base64
+from pathlib import Path
+
+import pandas as pd
+from autots import AutoTS
 
 logging.basicConfig(
     level=logging.ERROR,
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
-        # logging.FileHandler("logfile.log"),  # Log to file
-        logging.StreamHandler(),  # Log to console
+        logging.StreamHandler(),
     ],
 )
+logger = logging.getLogger(__name__)
 
 
 class DataLoader:
     @staticmethod
     def load_data(filepath):
         try:
-            # data_dict = json.loads(json_string)
-            # data_df = pd.DataFrame(data_dict["results"]["Result"])
             if isinstance(filepath, dict):
                 data_dict = filepath
             elif isinstance(filepath, str):
-                filepath = filepath
                 if filepath.endswith(".json"):
-                    with open(filepath, "r") as json_file:
+                    with Path(filepath).open() as json_file:
                         data_dict = json.load(json_file)
                 elif filepath.endswith(".csv"):
                     data_dict = pd.read_csv(filepath)
@@ -36,55 +31,58 @@ class DataLoader:
                     data_dict = pd.read_excel(filepath)
                 else:
                     raise ValueError(
-                        "Unsupported file format. Only JSON, CSV, and Excel files are supported."
+                        "Unsupported file format. Only JSON, CSV, and Excel files are supported.",
                     )
             else:
-                raise ValueError("Input must be either a dictionary or a file path.")
+                raise TypeError("Input must be either a dictionary or a file path.")
 
             if "results" in data_dict:
                 data_df = pd.DataFrame(data_dict["results"]["Result"])
             else:
                 data_df = pd.DataFrame(data_dict)
 
-            return data_df
-
-        except Exception as e:
-            logging.error(f"Error loading data from JSON: {e}")
+        except Exception:
+            logger.exception("Error loading data from JSON")
             raise
+        else:
+            return data_df
 
 
 class DataProcessor:
     @staticmethod
     def dynamic_preprocess_and_clean(df):
         try:
-            for column in df.columns:
-                if pd.api.types.is_numeric_dtype(df[column]):
-                    df[column].fillna(df[column].mean(), inplace=True)
-                    # Additional step to remove outliers from integer columns
-                    if pd.api.types.is_integer_dtype(df[column]):
-                        Q1 = df[column].quantile(0.25)
-                        Q3 = df[column].quantile(0.75)
-                        IQR = Q3 - Q1
-                        lower_bound = Q1 - 1.5 * IQR
-                        upper_bound = Q3 + 1.5 * IQR
-                        df = df[
-                            (df[column] >= lower_bound) & (df[column] <= upper_bound)
+            df_cleaned = df.copy()
+            for column in df_cleaned.columns:
+                if pd.api.types.is_numeric_dtype(df_cleaned[column]):
+                    df_cleaned[column] = df_cleaned[column].fillna(
+                        df_cleaned[column].mean()
+                    )
+                    if pd.api.types.is_integer_dtype(df_cleaned[column]):
+                        q1 = df_cleaned[column].quantile(0.25)
+                        q3 = df_cleaned[column].quantile(0.75)
+                        iqr = q3 - q1
+                        lower_bound = q1 - 1.5 * iqr
+                        upper_bound = q3 + 1.5 * iqr
+                        df_cleaned = df_cleaned[
+                            (df_cleaned[column] >= lower_bound)
+                            & (df_cleaned[column] <= upper_bound)
                         ]
-                elif pd.api.types.is_datetime64_any_dtype(df[column]):
-                    # Replace inplace operation with assignment
-                    df[column] = df[column].fillna(method="ffill")
-                elif pd.api.types.is_string_dtype(df[column]):
-                    # Replace inplace operation with assignment
-                    df[column] = df[column].fillna("Unknown")
-                elif pd.api.types.is_categorical_dtype(df[column]):
-                    # Replace inplace operation with assignment
-                    df[column] = df[column].fillna(df[column].mode()[0])
-            df.drop_duplicates(inplace=True)
+                elif pd.api.types.is_datetime64_any_dtype(df_cleaned[column]):
+                    df_cleaned[column] = df_cleaned[column].ffill()
+                elif pd.api.types.is_string_dtype(df_cleaned[column]):
+                    df_cleaned[column] = df_cleaned[column].fillna("Unknown")
+                elif pd.api.types.is_categorical_dtype(df_cleaned[column]):
+                    df_cleaned[column] = df_cleaned[column].fillna(
+                        df_cleaned[column].mode()[0]
+                    )
+            df_cleaned = df_cleaned.drop_duplicates()
 
-            return df
-        except Exception as e:
-            logging.error(f"Error preprocessing and cleaning data: {e}")
+        except Exception:
+            logger.exception("Error preprocessing and cleaning data")
             raise
+        else:
+            return df_cleaned
 
 
 class AutoTSModel:
@@ -109,35 +107,36 @@ class AutoTSModel:
                 num_validations=num_validations,
             )
             self.model.fit(df, date_col=date_col, value_col=value_col, id_col=None)
-        except Exception as e:
-            logging.error(f"Error training AutoTS model: {e}")
+        except Exception:
+            logger.exception("Error training AutoTS model")
             raise
 
-    def make_prediction(self, df, forecast_length):
+    def make_prediction(self, forecast_length):
         try:
             if self.model is None:
                 raise ValueError("Model has not been trained yet.")
             forecast = self.model.predict(forecast_length=forecast_length)
-            return forecast
-        except Exception as e:
-            logging.error(f"Error making predictions: {e}")
+        except Exception:
+            logger.exception("Error making predictions")
             raise
+        else:
+            return forecast
 
 
 class PredictionVisualizer:
     @staticmethod
     def visualize_and_export_predictions(
-        df,
         autots_model,
         forecast_length,
         export_csv_path="predictions.csv",
     ):
         try:
-            forecast = autots_model.make_prediction(df, forecast_length)
+            forecast = autots_model.make_prediction(forecast_length)
             predictions = forecast.forecast
             print(predictions)
             predictions.to_csv(export_csv_path, index=True)
-            return predictions
-        except Exception as e:
-            logging.error(f"Error visualizing and exporting predictions: {e}")
+        except Exception:
+            logger.exception("Error visualizing and exporting predictions")
             raise
+        else:
+            return predictions

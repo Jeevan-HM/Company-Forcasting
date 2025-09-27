@@ -1,73 +1,70 @@
-# 🚀 Time Series Forecasting App (for Salesquota) 🚀
+# 🚀 Time Series Forecasting API 🚀
 
-Welcome to our Time Series Forecasting App repository(for Salesquota)! This repository contains all the necessary files to run a FastAPI application that trains a time series model and visualizes its predictions. Let's dive in! 🏊‍♂️
+This repository contains a FastAPI application for time series forecasting. The application provides an API to train a forecasting model and get predictions.
 
-## 📁 Files and their Roles 📁
+## 📁 Files and their Roles
 
-### 🐍 app.py 🐍
+*   **`app.py`**: The main FastAPI application file. It defines the API endpoints for training the model and making predictions.
+*   **`main.py`**: This file contains the core logic for data loading, preprocessing, model training, and prediction. It includes the following classes:
+    *   `DataLoader`: Handles loading data from various formats (JSON, CSV, Excel).
+    *   `DataProcessor`: Cleans and preprocesses the data.
+    *   `AutoTSModel`: A wrapper for the `AutoTS` library to train the forecasting model.
+    *   `PredictionVisualizer`: Handles generating and exporting predictions.
+*   **`requirements.txt`**: A list of all the Python packages required to run the application.
+*   **`pyproject.toml`**: Project metadata and configuration file.
+*   **`Synthetic_Data_60_Rows.csv`**: Sample data file.
 
-This is the heart of our application. It provides an endpoint for training a time series model and visualizing its predictions. It also includes a root path for checking the connection status.
+## ⚙️ How to Run the Application
 
-#### Functions/Methods:
+### 1. Install Dependencies
 
-1. `train_model(data_input, date_column, value_column)`: An asynchronous function that loads and preprocesses the data, trains the model, and logs any errors that occur during the process. It also generates and visualizes predictions, exporting them to a CSV file. 📈
+First, you need to install the required Python packages. Open a terminal and run the following command:
 
-2. `read_root()`: An asynchronous function that returns a JSON object indicating a successful connection status. 🌐
+```bash
+pip install -r requirements.txt
+```
 
-#### Dependencies:
+### 2. Run the API Server
 
-This file relies on the following external libraries:
-- uvicorn: A lightning-fast ASGI server. ⚡
-- fastapi: A modern, fast (high-performance), web framework for building APIs with Python 3.6+ based on standard Python type hints. 🚀
-- a2wsgi: A WSGI to ASGI converter. 🔄
-- main: A custom module that presumably contains the DataLoader, DataProcessor, AutoTSModel, and PredictionVisualizer classes. 🛠
-- logging: A standard Python library for generating logging messages. 📝
+Once the dependencies are installed, you can start the FastAPI application by running the following command in your terminal:
 
-#### Usage Examples:
+```bash
+python app.py
+```
 
-- To train a model, make a POST request to the "/train_model" endpoint with the appropriate parameters.
-- To check the connection status, make a GET request to the "/" endpoint.
+This will start a local server, and you can access the application at `http://127.0.0.1:8000` in your web browser.
 
-#### Notes:
+### 3. Access the API Documentation
 
-- The FastAPI app is wrapped in ASGIMiddleware.
-- The app is set to run on localhost (127.0.0.1) at port 8000.
-- There are several commented-out lines of code that may be intended for future use or improvements.
+The API documentation is automatically generated and available at `http://127.0.0.1:8000/forecasting/api/docs`. You can use this documentation to test the API endpoints.
 
-### 📜 logfile.log 📜
+## ☁️ API Endpoints
 
-This file is used to record events or actions that occur while a software or application is running. It helps in tracking errors, user activities, and system behavior for debugging and auditing purposes. 🕵️‍♂️
+### `POST /forecasting/api/train_model`
 
-### 🐍 main.py 🐍
+This endpoint trains the time series forecasting model. You need to provide the data, date column, value column, and forecast length in the request body.
 
-This file is a Python script that is used for loading, preprocessing, and cleaning data, training a time series forecasting model using AutoTS, making predictions, and visualizing and exporting the predictions.
+**Request Body:**
 
-#### Functions/Methods:
+```json
+{
+  "data_input": "path/to/your/data.csv",
+  "date_column": "your_date_column",
+  "value_column": "your_value_column",
+  "forecast_length": 30
+}
+```
 
-1. `DataLoader.load_data_from_json(filepath)`: This method loads data from a JSON file and returns a pandas DataFrame. 📂
-2. `DataProcessor.dynamic_preprocess_and_clean(df)`: This method preprocesses and cleans the input DataFrame by handling missing values and removing duplicates. ��
-3. `AutoTSModel.train_model(df, date_col, value_col)`: This method trains an AutoTS model on the input DataFrame using the specified date and value columns. 🚂   
-4. `AutoTSModel.make_prediction(df)`: This method makes predictions using the trained AutoTS model. 🔮
-5. `PredictionVisualizer.visualize_and_export_predictions(df, autots_model, export_csv_path="predictions.csv")`: This method visualizes the predictions made by the AutoTS model and exports them to a CSV file. 📊
+The `data_input` can be a file path or a JSON string containing the data.
 
-#### Dependencies:
+**Response:**
 
-This file relies on the following external libraries: pandas, json, AutoTS, joblib, os, logging, matplotlib, and base64.
+The API will return a JSON object with the forecast results.
 
-#### Usage Examples:
+### `GET /`
 
-- To load data from a JSON file: `data_df = DataLoader.load_data_from_json(filepath)`
-- To preprocess and clean a DataFrame: `clean_df = DataProcessor.dynamic_preprocess_and_clean(df)`
-- To train an AutoTS model: `autots_model.train_model(df, date_col, value_col)`
-- To make predictions using the trained model: `forecast = autots_model.make_prediction(df)`
-- To visualize and export the predictions: `predictions = PredictionVisualizer.visualize_and_export_predictions(df, autots_model, export_csv_path="predictions.csv")`
+This is a root endpoint to check if the API is running. It will return a simple status message.
 
-#### Notes:
+## 🎉 Enjoy! 🎉
 
-- The AutoTSModel class requires the AutoTS library to be installed.
-- The DataLoader.load_data_from_json method currently loads data from an Excel file, not a JSON file. This might be a mistake or a placeholder for future implementation.
-- The PredictionVisualizer.visualize_and_export_predictions method has some commented out code for plotting the predictions and saving the plot as a PNG file. This might be intended for future use.
-
-## 🎉 That's it! 🎉
-
-We hope you find this repository useful for your time series forecasting needs. Happy coding! 🚀👩‍�👨‍‍💻🚀
+We hope you find this repository useful for your time series forecasting needs. Happy coding! 🚀👩‍💻👨‍💻🚀
